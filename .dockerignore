@@ -1,0 +1,27 @@
+# Ignore virtual environments
+venv/
+.env
+
+# Bytecode files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Editor and OS files
+.DS_Store
+.idea/
+.vscode/
+
+# Tests and logs
+tests/
+*.log
+*.sqlite3
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+ecommerce.postman_collection.json
+mysql-db-dump.sql

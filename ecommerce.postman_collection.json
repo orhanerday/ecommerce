@@ -1,0 +1,118 @@
+{
+  "info": {
+    "name": "E-Commerce API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "API collection for the FastAPI e-commerce service"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/health",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "health"]
+        }
+      }
+    },
+    {
+      "name": "Create Customer",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"demo-user\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/customers",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "customers"]
+        }
+      }
+    },
+    {
+      "name": "Get Product",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/products/{{product_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "products", "{{product_id}}"]
+        }
+      }
+    },
+    {
+      "name": "Create Order",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customer_id\": \"{{customer_id}}\",\n  \"product_id\": \"{{product_id}}\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/orders",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "orders"]
+        }
+      }
+    },
+    {
+      "name": "Get Order",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/orders/{{order_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "orders", "{{order_id}}"]
+        }
+      }
+    },
+    {
+      "name": "Cancel Order",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/orders/{{order_id}}/cancel",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "orders", "{{order_id}}", "cancel"]
+        }
+      }
+    }
+  ],
+  "event": [],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "product_id",
+      "value": "c7a8b9e0-5b6d-4c3e-8a9b-1c2d3e4f5a6b"
+    },
+    {
+      "key": "customer_id",
+      "value": "33333333-3333-4333-8333-333333333333"
+    },
+    {
+      "key": "order_id",
+      "value": ""
+    }
+  ]
+}

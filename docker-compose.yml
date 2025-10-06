@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: ecommerce-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: supersecret
+      MYSQL_DATABASE: ecommerce
+    ports:
+      - "3306:3306"
+    command: --default-authentication-plugin=mysql_native_password
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  app:
+    build: .
+    container_name: ecommerce-app
+    depends_on:
+      - mysql
+      - redis
+    environment:
+      DATABASE_URL: mysql+pymysql://root:supersecret@mysql:3306/ecommerce?charset=utf8mb4
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "8000:8000"
+    command: /start.sh
+    volumes:
+      - .:/app
+
+  redis:
+    image: redis:7
+    container_name: ecommerce-redis
+    ports:
+      - "6379:6379"
+
+volumes:
+  mysql_data:

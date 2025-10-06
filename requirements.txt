@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+redis
+sqlalchemy
+pymysql
+cryptography
+celery
+httpx
+tqdm
+gunicorn
+cachetools
