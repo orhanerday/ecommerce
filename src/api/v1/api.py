@@ -8,6 +8,3 @@ def register_routes(app: FastAPI):
     app.include_router(customer_router, prefix="/api/v1")
     app.include_router(product_router, prefix="/api/v1")
     app.include_router(order_router, prefix="/api/v1")
-
-    # app.include_router(customers_router)
-    # app.include_router(products_router)

@@ -18,6 +18,7 @@ inproc_cache = TTLCache(maxsize=10_000, ttl=30)
 redis_url = os.getenv("REDIS_URL", "redis://redis:6379/0")
 r = redis.from_url(redis_url, max_connections=1000)
 
+
 def get_product(db: Session, product_id: str, cache: bool) -> ProductResponse | None:
     """
     Retrieve a product with optional multi‑tier caching (in‑proc + Redis).
@@ -74,6 +75,7 @@ def get_product(db: Session, product_id: str, cache: bool) -> ProductResponse | 
         logging.error(f"Failed to retrieve product {product_id}. Error: {e}")
         raise
 
+
 def decrease_stock(db: Session, product_id: UUID, amount: int = 1) -> bool:
     """Decrease stock for a product by a specified amount.
 
@@ -86,17 +88,23 @@ def decrease_stock(db: Session, product_id: UUID, amount: int = 1) -> bool:
             return False
 
         if product.stock < amount:
-            logging.warning(f"Insufficient stock for product ID {product_id}. Current stock: {product.stock}, requested decrease: {amount}.")
+            logging.warning(
+                f"Insufficient stock for product ID {product_id}. Current stock: {product.stock}, requested decrease: {amount}."
+            )
             return False
 
         product.stock -= amount
-        logging.info(f"Decreased stock for product ID {product_id} by {amount}. New stock: {product.stock}.")
+        logging.info(
+            f"Decreased stock for product ID {product_id} by {amount}. New stock: {product.stock}."
+        )
         return True
     except Exception as e:
-        logging.error(f"Failed to decrease stock for product ID {product_id}. Error: {str(e)}")
+        logging.error(
+            f"Failed to decrease stock for product ID {product_id}. Error: {str(e)}"
+        )
         return False
-    
-    
+
+
 def increase_stock(db: Session, product_id: UUID, amount: int = 1) -> bool:
     """Increase stock for a product by a specified amount.
 
@@ -109,8 +117,12 @@ def increase_stock(db: Session, product_id: UUID, amount: int = 1) -> bool:
             return False
 
         product.stock += amount
-        logging.info(f"Increased stock for product ID {product_id} by {amount}. New stock: {product.stock}.")
+        logging.info(
+            f"Increased stock for product ID {product_id} by {amount}. New stock: {product.stock}."
+        )
         return True
     except Exception as e:
-        logging.error(f"Failed to increase stock for product ID {product_id}. Error: {str(e)}")
+        logging.error(
+            f"Failed to increase stock for product ID {product_id}. Error: {str(e)}"
+        )
         return False

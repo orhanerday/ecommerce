@@ -32,7 +32,6 @@ celery_app.conf.update(
     autoretry_for=(SQLAlchemyError,),  # Auto-retry on DB errors like Project A
     retry_backoff=True,
     retry_backoff_max=60,
-    #retry_kwargs={"max_retries": 3},  # Limited retries for critical operations
 )
 def process_order(self, order_id: str, product_id: str, customer_id: str) -> Dict:
     """
@@ -46,13 +45,13 @@ def process_order(self, order_id: str, product_id: str, customer_id: str) -> Dic
     from src.entities.order import OrderStatus
     from src.modules.interface.products import ProductsInterface
     from src.modules.interface.customer import CustomerInterface
-    
+
     # Create session inside task (Project A pattern)
     db = SessionLocal()
-    
+
     try:
         # Start transaction implicitly
-        
+
         # 1) Get dynamic price
         price = ProductsInterface.get_dynamic_price(db, product_id)
         if price is None:
@@ -86,15 +85,11 @@ def process_order(self, order_id: str, product_id: str, customer_id: str) -> Dic
 
         # Single commit at the end (like Project A)
         db.commit()
-        
+
         logger.info("Order %s COMPLETED for task %s", order_id, self.request.id)
-        
-        return {
-            "order_id": order_id,
-            "status": "COMPLETED",
-            "price_paid": float(price)
-        }
-        
+
+        return {"order_id": order_id, "status": "COMPLETED", "price_paid": float(price)}
+
     except ValueError as e:
         # Business logic failures - mark as FAILED, don't retry
         db.rollback()
@@ -104,39 +99,35 @@ def process_order(self, order_id: str, product_id: str, customer_id: str) -> Dic
             db.commit()
         except Exception as e2:
             logger.error(f"Failed to update order {order_id} status to FAILED: {e2}")
-        
+
         logger.warning(f"Order {order_id} FAILED: {str(e)}")
-        
+
         # Don't retry business logic failures
         self.request.callbacks = None
-        return {
-            "order_id": order_id,
-            "status": "FAILED",
-            "reason": str(e)
-        }
-        
+        return {"order_id": order_id, "status": "FAILED", "reason": str(e)}
+
     except SQLAlchemyError:
         # Database errors - let Celery retry automatically
         db.rollback()
         logger.error(f"Database error processing order {order_id}, will retry")
         raise
-        
+
     except Exception as e:
         # Unexpected errors - mark as FAILED
         db.rollback()
         logger.error(f"Unexpected error processing order {order_id}: {e}")
-        
+
         try:
             OrdersInterface.set_order_status(db, order_id, OrderStatus.FAILED)
             db.commit()
         except Exception:
             pass
-            
+
         return {
             "order_id": order_id,
             "status": "FAILED",
-            "reason": f"Unexpected error: {str(e)}"
+            "reason": f"Unexpected error: {str(e)}",
         }
-        
+
     finally:
         db.close()

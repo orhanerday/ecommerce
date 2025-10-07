@@ -12,4 +12,3 @@ configure_logging(LogLevels.info)
 app = FastAPI()
 
 register_routes(app)
-

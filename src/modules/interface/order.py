@@ -11,12 +11,13 @@ from src.database.core import DbSession
 from src.entities.order import OrderStatus
 from src.modules.orders import service
 
+
 class OrdersInterface:
     @staticmethod
     def set_order_status(db: DbSession, order_id: str, status: OrderStatus) -> bool:
         success = service.set_order_status(db, order_id, status)
         return success
-    
+
     def create_order(db: DbSession, order_payload: dict):
         order = service.create_order(db, order_payload)
         return order

@@ -23,18 +23,16 @@ def queue_order(db: Session, order: OrderCreate) -> OrderStatusResponse:
     """
     # Import at function level to avoid circular imports (Project A pattern)
     from src.modules.workers.celery import process_order, celery_app
-    
+
     try:
         order_id = str(uuid.uuid4())
         now = datetime.now(timezone.utc)
 
         # Fire async task immediately (Project A pattern)
         task = process_order.delay(
-            order_id, 
-            str(order.product_id), 
-            str(order.customer_id)
+            order_id, str(order.product_id), str(order.customer_id)
         )
-        
+
         # Log task ID for tracking
         logger.info(f"Order {order_id} queued with task ID {task.id}")
 
@@ -47,7 +45,7 @@ def queue_order(db: Session, order: OrderCreate) -> OrderStatusResponse:
             created_at=now,
             updated_at=now,
         )
-        
+
     except Exception as e:
         logger.error(f"Failed to queue order: {e}")
         raise HTTPException(status_code=500, detail="Failed to queue order")
@@ -71,7 +69,7 @@ def get_order(db: Session, order_id: str) -> Optional[OrderStatusResponse]:
             created_at=order.created_at,
             updated_at=order.updated_at,
         )
-        
+
     except Exception as e:
         logger.error(f"Failed to retrieve order {order_id}: {e}")
         raise
@@ -83,13 +81,10 @@ def get_queue_status(order_id: str) -> dict:
     Useful for tracking async processing status.
     """
     from src.modules.workers.celery import celery_app
-    
+
     # This would need the task_id stored somewhere
     # For now, returning a simple status check
-    return {
-        "order_id": order_id,
-        "queue_status": "check_db_for_status"
-    }
+    return {"order_id": order_id, "queue_status": "check_db_for_status"}
 
 
 def cancel_order(db: Session, order_id: str) -> bool:
@@ -118,7 +113,7 @@ def cancel_order(db: Session, order_id: str) -> bool:
         if customer is None:
             logger.warning(f"Customer {order.customer_id} not found")
             return False
-            
+
         product = repository.get_product(db, order.product_id)
         if product is None:
             logger.warning(f"Product {order.product_id} not found")
@@ -128,13 +123,13 @@ def cancel_order(db: Session, order_id: str) -> bool:
         order.status = OrderStatus.CANCELLED
         customer.wallet_balance += order.price_paid
         product.stock += 1
-        
+
         # Single commit
         db.commit()
-        
+
         logger.info(f"Order {order_id} cancelled successfully")
         return True
-        
+
     except Exception as e:
         logger.error(f"Failed to cancel order {order_id}: {e}")
         db.rollback()
@@ -156,7 +151,7 @@ def set_order_status(db: Session, order_id: str, status: OrderStatus) -> bool:
         # Don't commit here - let caller handle transaction
         logger.info(f"Order {order_id} status set to {status}")
         return True
-        
+
     except Exception as e:
         logger.error(f"Failed to update order {order_id} status: {e}")
         return False
@@ -171,7 +166,7 @@ def create_order(db: Session, order_data: dict) -> Optional[object]:
         order = repository.create_order(db, order_data)
         # Don't commit here - let caller handle transaction
         return order
-        
+
     except Exception as e:
         logger.error(f"Failed to create order: {e}")
         return None

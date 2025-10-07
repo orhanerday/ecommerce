@@ -9,14 +9,15 @@ Base = declarative_base()
 class Product(Base):
     __tablename__ = "products"
 
-    id = Column("product_id", String(36), primary_key=True, default=uuid.uuid4, index=True)
+    id = Column(
+        "product_id", String(36), primary_key=True, default=uuid.uuid4, index=True
+    )
     name = Column(String, nullable=False)
     description = Column(String)
     base_price = Column(Float, nullable=False)
     stock = Column(Integer, nullable=False, default=0)
     initial_stock = Column(Integer, nullable=False, default=0)
 
-    # Provide attribute expected by Pydantic response model
     @property
-    def product_id(self):  # compatibility alias
+    def product_id(self):
         return self.id

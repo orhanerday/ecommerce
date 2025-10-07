@@ -7,6 +7,7 @@ class OrderCreate(BaseModel):
     customer_id: str
     product_id: str
 
+
 class OrderQueueCreate(BaseModel):
     order_id: str
     customer_id: str
@@ -16,9 +17,11 @@ class OrderQueueCreate(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+
 class QueuedOrderResponse(OrderCreate):
     order_id: str
     status: OrderStatus
+
 
 class OrderStatusResponse(BaseModel):
     order_id: str

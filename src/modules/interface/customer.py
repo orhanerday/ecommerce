@@ -10,8 +10,11 @@ This module serves as the interface layer for the products domain.
 from src.database.core import DbSession
 from src.modules.customers import service
 
+
 class CustomerInterface:
     @staticmethod
-    def decrease_customer_balance(db: DbSession, customer_id: str, amount: float) -> bool:
+    def decrease_customer_balance(
+        db: DbSession, customer_id: str, amount: float
+    ) -> bool:
         success = service.decrease_customer_balance(db, customer_id, amount)
         return success

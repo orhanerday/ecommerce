@@ -28,8 +28,10 @@ def create_order(db: DbSession, order_data: dict) -> Order:
 def get_customer(db: DbSession, customer_id: str) -> Customer | None:
     return db.query(Customer).filter(Customer.customer_id == customer_id).first()
 
+
 def get_product(db: DbSession, product_id: str) -> Product | None:
     return db.query(Product).filter(Product.id == product_id).first()
+
 
 def get_order(db: DbSession, order_id: str) -> Order | None:
     return db.query(Order).filter(Order.order_id == order_id).first()

@@ -14,8 +14,14 @@ class Customer(Base):
     username = Column(String, nullable=False, unique=True)
     wallet_balance = Column(Float, default=5000.0)
     created_at = Column(DateTime, default=datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime,
+        default=datetime.now(timezone.utc),
+        onupdate=datetime.now(timezone.utc),
+    )
 
     __table_args__ = (
-        CheckConstraint("wallet_balance >= 0", name="check_wallet_balance_non_negative"),
+        CheckConstraint(
+            "wallet_balance >= 0", name="check_wallet_balance_non_negative"
+        ),
     )

@@ -14,6 +14,7 @@ def create_customer(db: Session, customer: CustomerCreate) -> CustomerResponse:
         logging.error(f"Failed to create customer. Error: {str(e)}")
         raise
 
+
 def decrease_customer_balance(db: Session, customer_id: str, amount: float) -> bool:
     """Decrease the balance of a customer by a specified amount.
 
@@ -26,12 +27,18 @@ def decrease_customer_balance(db: Session, customer_id: str, amount: float) -> b
             return False
 
         if customer.wallet_balance < amount:
-            logging.warning(f"Insufficient balance for customer ID {customer_id}. Current balance: {customer.wallet_balance}, requested decrease: {amount}.")
+            logging.warning(
+                f"Insufficient balance for customer ID {customer_id}. Current balance: {customer.wallet_balance}, requested decrease: {amount}."
+            )
             return False
 
         customer.wallet_balance -= amount
-        logging.info(f"Decreased balance for customer ID {customer_id} by {amount}. New balance: {customer.wallet_balance}.")
+        logging.info(
+            f"Decreased balance for customer ID {customer_id} by {amount}. New balance: {customer.wallet_balance}."
+        )
         return True
     except Exception as e:
-        logging.error(f"Failed to decrease balance for customer ID {customer_id}. Error: {str(e)}")
+        logging.error(
+            f"Failed to decrease balance for customer ID {customer_id}. Error: {str(e)}"
+        )
         return False
