@@ -4,7 +4,7 @@ The following diagram illustrates the high-level architecture of the e-commerce 
 
 ## Get starting
 ```bash
-git clone <repo-url> ecommerce
+git clone https://github.com/orhanerday/ecommerce
 cd ecommerce
 docker compose up --build
 ```
