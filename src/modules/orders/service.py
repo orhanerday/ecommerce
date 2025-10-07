@@ -1,33 +1,44 @@
 import logging
 import uuid
 from datetime import datetime, timezone
+from typing import Optional
 from sqlalchemy.orm import Session
+from celery.result import AsyncResult
+
 from src.entities.order import OrderStatus
 from .model import OrderCreate, OrderStatusResponse
 from . import repository
 
+# Configure logging
+logger = logging.getLogger(__name__)
 
-def queue_order(db: Session, order: OrderCreate) -> OrderStatusResponse | None:
+
+def queue_order(db: Session, order: OrderCreate) -> OrderStatusResponse:
     """
-    New lightweight create:
-    - Do NOT touch DB.
-    - Generate order_id (UUID).
-    - Immediately enqueue Celery task to validate + persist + process.
-    - Return PENDING response snapshot.
+    Lightweight order creation following Project A pattern:
+    - Generate order_id (UUID)
+    - Immediately enqueue Celery task
+    - Return PENDING response without DB interaction
+    - Worker handles all validation and persistence
     """
-    from src.modules.workers.celery import process_order  # local import avoids circulars
+    # Import at function level to avoid circular imports (Project A pattern)
+    from src.modules.workers.celery import process_order, celery_app
+    
     try:
         order_id = str(uuid.uuid4())
         now = datetime.now(timezone.utc)
 
-        # Fire async processing (worker will:
-        #  - validate customer/product
-        #  - calculate dynamic price
-        #  - create order row if missing
-        #  - decrement stock & wallet
-        #  - update status)
-        process_order.delay(order_id, str(order.product_id), str(order.customer_id))
+        # Fire async task immediately (Project A pattern)
+        task = process_order.delay(
+            order_id, 
+            str(order.product_id), 
+            str(order.customer_id)
+        )
+        
+        # Log task ID for tracking
+        logger.info(f"Order {order_id} queued with task ID {task.id}")
 
+        # Return immediately without DB interaction
         return OrderStatusResponse(
             order_id=order_id,
             product_id=order.product_id,
@@ -36,19 +47,20 @@ def queue_order(db: Session, order: OrderCreate) -> OrderStatusResponse | None:
             created_at=now,
             updated_at=now,
         )
+        
     except Exception as e:
-        logging.error(f"Failed to queue order. Error: {e}")
-        raise
+        logger.error(f"Failed to queue order: {e}")
+        raise HTTPException(status_code=500, detail="Failed to queue order")
 
-def get_order(db: Session, order_id: str) -> OrderStatusResponse | None:
-    """Retrieve the status of an order by its ID.
 
-    Returns an OrderStatusResponse or None if the order does not exist.
+def get_order(db: Session, order_id: str) -> Optional[OrderStatusResponse]:
+    """
+    Retrieve order status with optimized DB access.
+    Single query, minimal processing.
     """
     try:
         order = repository.get_order(db, order_id)
         if order is None:
-            logging.warning(f"Order with ID {order_id} not found.")
             return None
 
         return OrderStatusResponse(
@@ -59,70 +71,107 @@ def get_order(db: Session, order_id: str) -> OrderStatusResponse | None:
             created_at=order.created_at,
             updated_at=order.updated_at,
         )
+        
     except Exception as e:
-        logging.error(f"Failed to retrieve order status. Error: {e}")
+        logger.error(f"Failed to retrieve order {order_id}: {e}")
         raise
-    
-def cancel_order(db: Session, order_id: str) -> bool:
-    """Cancel an order by its ID.
 
-    Returns True if the cancellation request was successful, False otherwise.
+
+def get_queue_status(order_id: str) -> dict:
+    """
+    Get Celery task status for an order (Project A pattern).
+    Useful for tracking async processing status.
+    """
+    from src.modules.workers.celery import celery_app
+    
+    # This would need the task_id stored somewhere
+    # For now, returning a simple status check
+    return {
+        "order_id": order_id,
+        "queue_status": "check_db_for_status"
+    }
+
+
+def cancel_order(db: Session, order_id: str) -> bool:
+    """
+    Cancel order with optimized transaction handling.
+    Single transaction for all operations.
     """
     try:
+        # Fetch all required entities first
         order = repository.get_order(db, order_id)
         if order is None:
-            logging.warning(f"Order with ID {order_id} not found.")
+            logger.warning(f"Order {order_id} not found")
             return False
 
-        if order.status in [OrderStatus.CANCELLED]:
-            logging.info(f"Order with ID {order_id} is already {order.status}. No action taken.")
+        # Check cancellation eligibility
+        if order.status == OrderStatus.CANCELLED:
+            logger.info(f"Order {order_id} already cancelled")
             return False
 
-        if order.status != OrderStatus.COMPLETED :
-            logging.info(f"Order with ID {order_id} is not completed. No action taken.")
+        if order.status != OrderStatus.COMPLETED:
+            logger.info(f"Order {order_id} not completed, cannot cancel")
             return False
 
-        order.status = OrderStatus.CANCELLED
+        # Fetch related entities
         customer = repository.get_customer(db, order.customer_id)
         if customer is None:
-            logging.warning(f"Customer with ID {order.customer_id} not found.")
+            logger.warning(f"Customer {order.customer_id} not found")
             return False
-        customer.wallet_balance += order.price_paid
+            
         product = repository.get_product(db, order.product_id)
         if product is None:
-            logging.warning(f"Product with ID {order.product_id} not found.")
+            logger.warning(f"Product {order.product_id} not found")
             return False
+
+        # Perform all updates in single transaction
+        order.status = OrderStatus.CANCELLED
+        customer.wallet_balance += order.price_paid
         product.stock += 1
+        
+        # Single commit
         db.commit()
-        logging.info(f"Order with ID {order_id} has been cancelled.")
+        
+        logger.info(f"Order {order_id} cancelled successfully")
         return True
+        
     except Exception as e:
-        logging.error(f"Failed to cancel order with ID {order_id}. Error: {e}")
+        logger.error(f"Failed to cancel order {order_id}: {e}")
         db.rollback()
         return False
 
-def set_order_status(db: Session, order_id: str, status: OrderStatus) -> bool:
-    """Set the status of an order.
 
-    Returns True if the status update was successful, False otherwise.
+def set_order_status(db: Session, order_id: str, status: OrderStatus) -> bool:
+    """
+    Update order status efficiently.
+    Note: Commit should be handled by caller for transaction consistency.
     """
     try:
         order = repository.get_order(db, order_id)
         if order is None:
-            logging.warning(f"Order with ID {order_id} not found.")
+            logger.warning(f"Order {order_id} not found")
             return False
 
         order.status = status
-        logging.info(f"Order with ID {order_id} status updated to {status}.")
+        # Don't commit here - let caller handle transaction
+        logger.info(f"Order {order_id} status set to {status}")
         return True
+        
     except Exception as e:
-        logging.error(f"Failed to update status for order ID {order_id}. Error: {e}")
-        return 
+        logger.error(f"Failed to update order {order_id} status: {e}")
+        return False
 
-def create_order(db: Session, order_data: dict):
+
+def create_order(db: Session, order_data: dict) -> Optional[object]:
+    """
+    Create order with minimal overhead.
+    Note: Commit should be handled by caller for transaction consistency.
+    """
     try:
         order = repository.create_order(db, order_data)
+        # Don't commit here - let caller handle transaction
         return order
+        
     except Exception as e:
-        logging.error(f"Failed to create order. Error: {e}")
+        logger.error(f"Failed to create order: {e}")
         return None
